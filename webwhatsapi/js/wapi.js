@@ -576,38 +576,37 @@ function isChatMessage(message) {
 
 WAPI.getUnreadMessages = function (includeMe, includeNotifications, done) {
 	const chats = Store.Chat.models;
-	const output = [];
-	for (const chat in chats) {
-		if (isNaN(chat)) {
-			continue;
-		}
 
-		const messageGroupObj = chats[chat];
-		const messageGroup = WAPI._serializeChatObj(messageGroupObj);
+	const res = [];
+	for (const chat of chats) {
+		const messageGroup = WAPI._serializeChatObj(chat);
 		messageGroup.messages = [];
 
-		const messages = messageGroupObj.msgs.models;
+		const messages = chat.msgs.models;
 		for (let i = messages.length - 1; i >= 0; i--) {
-			const messageObj = messages[i];
-			if (!messageObj.__x_isNewMsg) {
+			const msg = messages[i];
+			if (!msg.__x_isNewMsg) {
 				break;
-			} else {
-				messageObj.__x_isNewMsg = false;
-				const message = WAPI.processMessageObj(messageObj, includeMe,  includeNotifications);
-				if(message){
-					messageGroup.messages.push(message);
-				}
+			}
+
+			msg.__x_isNewMsg = false;
+
+			const processed = WAPI.processMessageObj(msg, includeMe,  includeNotifications);
+			if (msg != null) {
+				messageGroup.messages.push(processed);
 			}
 		}
 
 		if (messageGroup.messages.length > 0) {
-			output.push(messageGroup);
+			res.push(messageGroup);
 		}
 	}
-	if (done !== undefined) {
-		done(output);
+
+	if (done != null) {
+		done(res);
 	}
-	return output;
+
+	return res;
 };
 
 WAPI.getGroupOwnerID = async function (id, done) {
