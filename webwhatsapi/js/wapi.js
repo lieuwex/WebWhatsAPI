@@ -456,7 +456,7 @@ WAPI.getMessageById = function (id, done) {
 };
 
 WAPI.sendMessageToID = function (id, message, done) {
-	if(Store.Chat.models.length == 0) {
+	if(Store.Chat.models.length === 0) {
 		return false;
 	}
 
@@ -482,53 +482,59 @@ WAPI.sendMessageToID = function (id, message, done) {
 	return true;
 }
 
-WAPI.sendMessage = function (id, message, done) {
-	const Chats = Store.Chat.models;
+WAPI.sendMessage = function (id, message, replyId, done) {
+	/*
+	var splitted = replyId.split('_');
+	var replyObj = {
+		contextInfo: function () {
+			return {
+				quotedMsg: {
+					type: 'gp2',
+					subtype: 'leave',
+				},
+				quotedStanzaID: splitted[2],
+				quotedRemoteJid: splitted[1],
+			}
+		},
+	};
+	*/
 
-	for (const chat in Chats) {
-		if (isNaN(chat)) {
-			continue;
+	const chat = Store.Chat.models.find(c => c.__x_id === id);
+
+	if (done == null) {
+		done = () => {};
+	}
+
+	chat.sendMessage(message/*, {}, replyObj*/).then(function () {
+		function sleep(ms) {
+			return new Promise(resolve => setTimeout(resolve, ms));
 		}
 
-		const temp = {};
-		temp.name = Chats[chat].__x__formattedTitle;
-		temp.id = Chats[chat].__x_id;
-		if (temp.id === id) {
-			if (done !== undefined) {
-				Chats[chat].sendMessage(message).then(function () {
-					function sleep(ms) {
-						return new Promise(resolve => setTimeout(resolve, ms));
-					}
+		var trials = 0;
 
-					var trials = 0;
+		function iter() {
+			for (let i=chat.msgs.models.length - 1; i >= 0; i--) {
+				const msg = chat.msgs.models[i];
 
-					function check() {
-						for (let i=Chats[chat].msgs.models.length - 1; i >= 0; i--) {
-							const msg = Chats[chat].msgs.models[i];
+				if (!msg.senderObj.isMe || msg.body !== message) {
+					continue;
+				}
 
-							if (!msg.senderObj.isMe || msg.body != message) {
-								continue;
-							}
-							done(WAPI._serializeMessageObj(msg));
-							return True;
-						}
-						trials += 1;
-						console.log(trials);
-						if (trials > 30) {
-							done(true);
-							return;
-						}
-						sleep(500).then(check);
-					}
-					check();
-				});
-				return true;
-			} else {
-				Chats[chat].sendMessage(message);
 				return true;
 			}
+			trials++;
+			console.log(trials);
+			if (trials > 40) { // 20s
+				return;
+			}
+			sleep(500).then(iter);
 		}
-	}
+
+		iter();
+		done(true);
+	});
+
+	return true;
 };
 
 
@@ -562,20 +568,6 @@ WAPI.sendSeen = function (id, done) {
 	}
 	return false;
 };
-
-function isChatMessage(message) {
-	if (message.__x_isSentByMe) {
-		return false;
-	}
-	if (message.__x_isNotification) {
-		return false;
-	}
-	if (!message.__x_isUserCreatedType) {
-		return false;
-	}
-	return true;
-}
-
 
 WAPI.getUnreadMessages = function (includeMe, includeNotifications, done) {
 	const chats = Store.Chat.models;
