@@ -107,9 +107,10 @@ class WhatsAPIDriverAsync:
         for group in groups:
             yield group
 
-    async def chat_send_message(self, chat_id, message):
+    async def chat_send_message(self, chat_id, message, replyId):
         return await self._run_async(self._driver.chat_send_message,
-                                     chat_id=chat_id, message=message)
+                                     chat_id=chat_id, message=message,
+                                     replyId=replyId)
 
     async def chat_get_messages(self, chat, include_me=False, include_notifications=False):
         async for msg_id in self.get_all_message_ids_in_chat(chat,
